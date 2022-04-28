@@ -1,0 +1,580 @@
+---
+title: "Regression Analysis (cf. 4.2)"
+
+output:
+  html_notebook: default
+---
+
+This R Notebook is used to load, fit, and compare various linear models (lms).
+
+In more detail, the following is done:
+1. The data is loaded and prepared.
+2. Data inspection.
+3. The following lms can then be fitted:
+  - Simple lms.
+  - Multiple lms.
+  - Multiple lms with interactions terms.
+  - Time-lagged lms.
+  
+Analyses are enumerated. However, these numbers do not necessarily follow
+table numbers in the paper, but built upon each other. In addition, please note 
+that not every analysis is reflected in detail in a table in the paper but can 
+also be part of a larger analysis or as a basis for general conclusions and thus, 
+for your reference.
+
+To use this NB, the data has to be processed and prepared with the VK utils
+module (run_preprocessing.sh and run_calculations.sh)
+
+Load packages needed.
+
+```{r}
+## First specify the packages of interest
+packages = c("dplyr", "Hmisc", "stringr", "tidyverse", "lmtest", "dyn", "markdown")
+
+## Now load or install&load all
+package.check <- lapply(
+  packages,
+  FUN = function(x) {
+    if (!require(x, character.only = TRUE)) {
+      install.packages(x, dependencies = TRUE)
+      library(x, character.only = TRUE)
+    }
+  }
+)
+```
+
+1. Load and prepare data.
+
+```{r Load Data, warning=FALSE}
+
+# Specify which time slice should be loaded >> Options: 7,5,3,1
+# Use a string, as in the pre-selected time slice of "7" da
+
+
+time_slice = 5 # choose time slice needed
+data_dir <- paste("./../../../data/metrics_percent_results/", time_slice, "days/countries", sep = "")
+
+# Save current working directory
+oldwd <- getwd()
+
+# Set data directory and read in data
+setwd(data_dir)
+files  <- list.files(pattern = '.csv')
+tables <- lapply(files, read.csv, header = TRUE,  stringsAsFactors = FALSE)
+combined <- do.call(rbind, tables)
+
+# Go back to usual working directory
+setwd(oldwd)
+```
+
+Convert status denoting subcorpus affiliation into 0 and 1 factor, where control = 0 and free = 1. 
+
+```{r message=FALSE}
+library(dplyr)
+combined$status <- as.factor(combined$status)
+combined <- combined %>% 
+    mutate(status = recode(status,
+                      "control" = "0", 
+                      "free" = "1"))
+# remove De Facto
+combined <- combined[!grepl("de_facto_states", combined$country),]
+countries = unique(combined$country)
+```
+
+Inspect data.
+
+```{r message=FALSE, warning=FALSE}
+library(Hmisc)
+describe(combined)
+summary(combined$post)
+```
+
+# Analysis 1 (cf. Supplementary Data, §2, Table 3: Free/Control, Single Countries)
+
+We include a range of commented tests and analyses that were carrried out.
+To use them, please uncomment. Please note that for the sake of readability, 
+the commented lines are removed from later analyses. 
+
+
+For subset in vk_corpus:
+  for each country in subset:
+    y <- delta_cov ~ delta_rtsi
+    
+a. Free subset
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lmtest)
+
+par(mfrow = c(2, 2))
+
+# Initialize list of all country lms
+analysis_1_free_res <- list()
+
+for (elem in countries) {
+  # Create free subcorpus
+  free <-
+    combined %>% filter(combined$country == elem, combined$status == 1)
+  
+  # Experiments with absolute values
+  # free$rtsi <- round((free$rtsi * 100),0)
+  # free$abs_posts <- round((free$abs_posts * 100),0)
+  # analysis_1 <- lm(abs_posts ~ rtsi, data = free)
+  
+  # Experiments with log-transformed values
+  # free$rtsi_pct = log(free$rtsi_pct+1)
+  # free$post = log(free$post+1)
+  
+  # Experiments with taking the square-root of percent and absolute values
+  # free$rtsi_pct = sqrt(pmax(0, free$rtsi_pct))
+  # free$post = sqrt(pmax(0, free$post))
+  
+  
+  # Analysis 1: DeltaCoverage ~ DeltaRTSI
+  analysis_1 <- lm(post ~ rtsi_pct, data = free)
+  print(elem)
+  
+  # Check whether residuals are autocorrelated or not
+  # acf(analysis_1$residuals)
+  # runs <- lawstat::runs.test(analysis_1$residuals)
+  # print(runs)
+  
+  # Durbin-Watson Test (Auto correlation of disturbances)
+  # dw_test <- lmtest::dwtest(analysis_1)
+  # print(dw_test)
+  
+  # Test for Association/Correlation Between Paired Samples
+  # cor_test <- cor.test(free$rtsi_pct, analysis_1$residuals)
+  # print(cor_test)
+  
+  # Check mean of residuals, which should be near 0
+  # check_mean_of_res = mean(analysis_1)
+  # print(check_mean_of_res)
+  
+  print(summary(analysis_1))
+  
+  # Check confidence intervals
+  # print(confint(analysis_1))
+  
+  # Visual inspection
+  plot(analysis_1)
+  
+  # Add to all other countries
+  analysis_1_free_res[[elem]] <- analysis_1
+}
+```
+
+b. Control subset
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lmtest)
+
+par(mfrow = c(2, 2))
+
+# Initialize list of all country lms
+analysis_1_control <- list()
+
+for (elem in countries) {
+  # Create control subcorpus
+  control <-
+    combined %>% filter(combined$country == elem, combined$status == 0)
+  
+  # Experiments with absolute values
+  # control$rtsi <- round((control$rtsi * 100),0)
+  # control$abs_posts <- round((control$abs_posts * 100),0)
+  # analysis_1 <- lm(abs_posts ~ rtsi, data = control)
+  
+  # Experiments with log-transformed values
+  # control$rtsi_pct = log(control$rtsi_pct+1)
+  # control$post = log(control$post+1)
+  
+  # Experiments with taking the square-root of percent and absolute values
+  # control$rtsi_pct = sqrt(pmax(0, control$rtsi_pct))
+  # control$post = sqrt(pmax(0, control$post))
+  
+  
+  # Analysis 1: DeltaCoverage ~ DeltaRTSI
+  analysis_1 <- lm(post ~ rtsi_pct, data = control)
+  print(elem)
+  
+  # Check whether residuals are autocorrelated or not
+  # acf(analysis_1$residuals)
+  # runs <- lawstat::runs.test(analysis_1$residuals)
+  # print(runs)
+  
+  # Durbin-Watson Test (Auto correlation of disturbances)
+  # dw_test <- lmtest::dwtest(analysis_1)
+  # print(dw_test)
+  
+  # Test for Association/Correlation Between Paired Samples
+  # cor_test <- cor.test(control$rtsi_pct, analysis_1$residuals)
+  # print(cor_test)
+  
+  # Check mean of residuals, which should be near 0
+  # check_mean_of_res = mean(analysis_1)
+  # print(check_mean_of_res)
+  
+  print(summary(analysis_1))
+  
+  # Check confidence intervals
+  # print(confint(analysis_1))
+  
+  # Visual inspection
+  plot(analysis_1)
+  
+  # Add to all other countries
+  analysis_1_control[[elem]] <- analysis_1
+}
+```
+
+# Analysis 2 # Analysis 1 (cf. Supplementary Data, §2, Table 3: Both, Single Countries)
+
+For each country in vk_corpus
+  y <- delta_cov ~ delta_rtsi
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+
+par(mfrow=c(2,2))
+
+analysis_2_b <- list()
+
+for (elem in countries) {
+  
+  # Use both subsets together
+  both <- combined %>% filter(combined$country == elem)
+  print(elem)
+  
+  # Analysis 2: DeltaCoverage ~ DeltaRTSI
+  analysis_2 <- lm(post ~ rtsi_pct, data = both)
+  print(summary(analysis_2))
+  plot(analysis_2)
+  analysis_2_b[[elem]] <- analysis_2
+}
+```
+
+# Analysis 3 (Baseline analysis for analyszing significance of factors "status" and "country".
+
+For all_countries in vk_corpus
+  y <- delta_cov ~ delta_rtsi
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+
+par(mfrow=c(2,2))
+
+# Analysis 3: DeltaCoverage ~ DeltaRTSI
+analysis_3 <- lm(post ~ rtsi_pct, data = combined)
+print(summary(analysis_3))
+plot(analysis_3)
+```
+
+# Analysis 4 (cf. Supplementary Material, §2, Table 4)
+
+For each country in vk_corpus:
+    y <- delta_cov ∼ delta_rtsi + status
+    
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+
+par(mfrow=c(2,2))
+
+analysis_4_b <- list()
+
+for (elem in countries) {
+  
+  # Use both subsets together
+  both <- combined %>% filter(combined$country == elem)
+  print(elem)
+  
+  # Analysis 4: DeltaCoverage ~ DeltaRTSI + status
+  analysis_4 <- lm(post ~ rtsi_pct + status, data = both)
+  print(summary(analysis_4))
+  plot(analysis_4)
+  analysis_4_b[[elem]] <- analysis_4
+}
+```
+
+# Analysis 5 (Analysis reg. significance of factor "status", not outlined in detail in table) 
+
+For all_countries in vk_corpus:
+  y <- delta_cov ∼ delta_rtsi + status
+
+To inspect the data as for Analysis 1, add the corresponding lines.
+For the sake of readability, they are spared in the following.
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+
+par(mfrow=c(2,2))
+
+# Analysis 5: DeltaCoverage ~ DeltaRTSI + status
+analysis_5 <- lm(post ~ rtsi_pct + status, data = combined)
+print(summary(analysis_5))
+plot(analysis_5)
+```
+
+# Analysis 6 (cf. Supplementary Material, §2, Table 1)
+
+For all countries in subset:
+    y <- delta_cov ∼ delta_rtsi + country
+
+a. Free subset
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lmtest)
+
+par(mfrow = c(2, 2))
+
+# Load data as needed, using Africa as reference factor
+free <- combined %>% filter(combined$status == 1)
+free$country <- as.factor(free$country)
+free$country <- relevel(free$country, ref = 1)
+
+# Create free subcorpus
+free <-
+  combined %>% filter(combined$status == 1)
+
+# Analysis 6: DeltaCoverage ~ DeltaRTSI
+analysis_6 <- lm(post ~ rtsi_pct + country, data = free)
+
+print(summary(analysis_6))
+
+# Visual inspection
+plot(analysis_6)
+```
+
+b. Control subset
+```{r message=FALSE, warning=FALSE, cache=TRUE}
+library(tidyverse)
+library(lmtest)
+
+par(mfrow = c(2, 2))
+
+# Load data as needed, using Africa as reference factor
+control <- combined %>% filter(combined$status == 0)
+control$country <- as.factor(control$country)
+control$country <- relevel(control$country, ref = 1)
+
+# Create control subcorpus
+control <-
+combined %>% filter(combined$status == 0)
+
+# Analysis 6: DeltaCoverage ~ DeltaRTSI
+analysis_6 <- lm(post ~ rtsi_pct + country, data = control)
+
+print(summary(analysis_6))
+
+# Visual inspection
+plot(analysis_6)
+```
+
+# Analysis 7 (Analysis reg. significance of factor "country", not outlined in detail in table) 
+
+For all countries in vk_corpus:
+  y <- delta_cov ∼ delta_rtsi + country
+
+```{r message=FALSE, warning=FALSE, cache=TRUE}
+library(tidyverse)
+
+par(mfrow = c(2, 2))
+
+# Load data as needed, using Africa as reference factor
+combined$country <- as.factor(combined$country)
+combined$country <- relevel(combined$country, ref = 1)
+
+analysis_7 <- lm(post ~ rtsi_pct + country, data = combined)
+summary(analysis_7)
+plot(analysis_7)
+```
+
+# Analysis 8 (Analysis reg. significance of factor "country", not outlined in detail in table) 
+
+For all countries in subset:
+    y <- delta_cov ∼ delta_rtsi + country + (delta_rtsi * country)
+
+a. Free subset
+```{r message=FALSE, warning=FALSE, cache=TRUE}
+library(tidyverse)
+library(lmtest)
+
+par(mfrow = c(2, 2))
+
+# Load data as needed, using Africa as reference factor
+free <- combined %>% filter(combined$status == 1)
+free$country <- as.factor(free$country)
+free$country <- relevel(free$country, ref = 1)
+
+# Analysis 8: DeltaCoverage ~ DeltaRTSI + country + (DeltaRTSI * country)
+analysis_8 <- lm(post ~ rtsi_pct + country + (rtsi_pct * country), data = free)
+print(summary(analysis_8))
+plot(analysis_8)
+```
+
+b. Control subset
+```{r message=FALSE, warning=FALSE, cache=TRUE}
+library(tidyverse)
+library(lmtest)
+
+par(mfrow = c(2, 2))
+
+# Initialize list of all country lms
+analysis_8_f <- list()
+
+# Load data as needed, using Africa as reference factor
+control <- combined %>% filter(combined$status == 0)
+control$country <- as.factor(control$country)
+control$country <- relevel(control$country, ref = 1)
+
+# Analysis 8: DeltaCoverage ~ DeltaRTSI + country + (DeltaRTSI * country)
+analysis_8 <- lm(post ~ rtsi_pct + country + (rtsi_pct * country), data = control)
+summary(analysis_8)
+plot(analysis_8)
+```
+
+# Analysis 9 (Analysis reg. significance of factor "country", not outlined in detail in table) 
+
+for all_countries in vk_corpus:
+  y <- delta_cov ∼ delta_rtsi + country + (delta_rtsi * country)
+  
+```{r message=FALSE, warning=FALSE, cache=TRUE}
+library(tidyverse)
+
+par(mfrow = c(2, 2))
+
+# Load data as needed, using Africa as reference factor
+combined$country <- as.factor(combined$country)
+combined$country <- relevel(combined$country, ref = 1)
+
+analysis_9 <- lm(post ~ rtsi_pct + country + (rtsi_pct * country), data = combined)
+summary(analysis_9)
+plot(analysis_9)
+```
+
+# Model Comparison II (Analysis reg. significance of factor "status" and "country", cf. §4.2) 
+
+```{r message=FALSE, warning=FALSE, cache=TRUE}
+# Model Comparison reg. significance of factors (status and country)
+
+# Check significance of status
+anova(analysis_3, analysis_5, test="Chisq") 
+anova(analysis_3, analysis_7, analysis_9, test="Chisq")
+
+# Check significance of country
+anova(analysis_3, analysis_7, test="Chisq") 
+anova(analysis_6, analysis_8, test="Chisq")
+```
+
+# Time-Lagged Linear Regression (cf. §4.2, Table 4)
+# Analysis 10
+
+y <- delta_cov ~ lag(delta_cov,-1) + lag(delta_rtsi,-1)
+
+# Analysis 11
+
+y <- delta_cov ~ lag(delta_cov,-1) + lag(delta_cov,-2) + lag(delta_rtsi,-1) +
+lag(delta_cov,-2) + lag(delta_rtsi,-2)
+
+10.a and 11.a Free subset
+```{r message=FALSE, warning=FALSE, cache=TRUE}
+library(tidyverse)
+library(dyn)
+library(zoo)
+library(xts)
+par(mfrow = c(2, 2))
+
+analysis_10_f <- list()
+analysis_11_f <- list()
+
+combined$country <- as.factor(combined$country)
+combined$country <- relevel(combined$country, ref = 1)
+
+for (elem in countries) {
+  
+  # Get free subcorpus
+  free <- combined %>% filter(combined$country == elem, combined$status == 1)
+  # Choose the right lag from stats
+  lag <- stats::lag
+  # Create time series
+  dates <- free$date
+  dates <- seq(as.Date('2018-01-17'), length = 52, by = "days")
+  free_sel <- data.frame(free$rtsi_pct, free$post)
+  free_ts <- zoo(free_sel, dates)
+  
+  # Analysis 10.a: DeltaCoverage (t) ~ DeltaCoverage (t-1) + DeltaRTSI (t-1)
+ analysis_10 <-
+    dyn$lm(free.post ~ lag(free.post,-1) + lag(free.rtsi_pct,-1), data = free_ts)
+  
+  # Analysis 11.a: DeltaCoverage (t) ~ DeltaCoverage (t-2) + DeltaRTSI (t-2)
+  analysis_11 <-
+    dyn$lm(
+      free.post ~ lag(free.post,-1) + lag(free.rtsi_pct,-1) + lag(free.post, -2) + lag(free.rtsi_pct, -2),
+      data = free_ts
+    )
+
+  # Plot and inspect results
+  print(elem)
+
+  print(summary(analysis_10))
+  print(summary(analysis_11))
+  
+  plot(analysis_10)
+  plot(analysis_11)
+  
+  # Save results
+  analysis_10_f[[elem]] <- analysis_10
+  analysis_11_f[[elem]] <- analysis_11
+}
+```
+
+```{r message=FALSE, warning=FALSE, cache=TRUE}
+library(tidyverse)
+library(dyn)
+library(zoo)
+library(xts)
+
+par(mfrow = c(2, 2))
+
+analysis_10_c <- list()
+analysis_11_c <- list()
+
+combined$country <- as.factor(combined$country)
+combined$country <- relevel(combined$country, ref = 1)
+
+for (elem in countries) {
+  
+  # Get control subcorpus
+  control <- combined %>% filter(combined$country == elem, combined$status == 0)
+  # Choose the right lag from stats
+  lag <- stats::lag
+  # Create time series
+  dates <- control$date
+  dates <- seq(as.Date('2018-01-17'), length = 52, by = "days")
+  control_sel <- data.frame(control$rtsi_pct, control$post)
+  control_ts <- zoo(control_sel, dates)
+  
+  # Analysis 10.a: DeltaCoverage (t) ~ DeltaCoverage (t-1) + DeltaRTSI (t-1)
+  analysis_10 <-
+    dyn$lm(control.post ~ lag(control.post,-1) + lag(control.rtsi_pct,-1), data = control_ts)
+  
+  # Analysis 11.a: DeltaCoverage (t) ~ DeltaCoverage (t-2) + DeltaRTSI (t-2)
+  analysis_11 <-
+    dyn$lm(
+      control.post ~ lag(control.post,-1) + lag(control.rtsi_pct,-1) + lag(control.post, -2) + lag(control.rtsi_pct, -2),
+      data = control_ts
+    )
+
+  # Plot and inspect results
+  print(elem)
+
+   print(summary(analysis_10))
+  print(summary(analysis_11))
+  #print(summary(analysis_e3))
+  
+  #plot(analysis_10)
+  plot(analysis_11)
+  
+  # Save results
+  analysis_10_c[[elem]] <- analysis_10
+  analysis_11_c[[elem]] <- analysis_11
+}
+```
