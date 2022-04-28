@@ -38,7 +38,7 @@ Lastly, to run the regression analysis, open the file in a corresponding IDE and
 
 ### Supplementary Material
 
-The supplementary material includes additional results for the statistical analyses (*§4.1 Correlation Analysis* and *§4.2 Regression Analysis*). It also features all posts that serve as supportive material for the qualitative analysis (*§4.3 Qualitative Analysis*).
+The supplementary material includes additional results for the statistical analyses (*§4.1 Correlation Analysis* and *§4.2 Regression Analysis*). It also features a sample of the posts that serve as supportive material for the qualitative analysis (*§4.3 Qualitative Analysis*).
 
 Specifically, the PDF file `supplementary_material.pdf` contains additional statistics and regression analysis results. 
 
