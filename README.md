@@ -60,7 +60,27 @@ Using an editor, where the encoding (UTF-8) can be specified, might aid in corre
 
 All posts are part of the VK corpus (for details, see _Data_).
 
-### License
+### License & Citation
+
 The above code is open-sourced under the AGPL-3.0 license. See the LICENSE file for details.
 
 Note that the code in this repository was developed for research purposes only and will not be maintained. 
+
+For citations, please use the following bibtex: 
+
+```bibtex
+@inproceedings{eichel-etal-2022-investigating,
+    title = "Investigating Independence vs. Control: Agenda-Setting in {R}ussian News Coverage on Social Media",
+    author = "Eichel, Annerose  and
+      Lapesa, Gabriella  and
+      Schulte im Walde, Sabine",
+    booktitle = "Proceedings of the Thirteenth Language Resources and Evaluation Conference",
+    month = jun,
+    year = "2022",
+    address = "Marseille, France",
+    publisher = "European Language Resources Association",
+    url = "https://aclanthology.org/2022.lrec-1.569",
+    pages = "5314--5323"
+}
+```
+
