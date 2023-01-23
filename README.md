@@ -2,7 +2,7 @@
 
 This is the supplementary material and companion code for the experiments reported in the paper:
 
-"Investigating Independence vs. Control: Agenda-Setting in Russian News Coverage on Social Media" by Annerose Eichel, Gabriella Lapesa and Sabine Schulte im Walde (to be) published at LREC 2022.
+"Investigating Independence vs. Control: Agenda-Setting in Russian News Coverage on Social Media" by Annerose Eichel, Gabriella Lapesa and Sabine Schulte im Walde published at LREC 2022.
 
 The code allows users to reproduce the results reported in the paper and potentially extend the models to new datasets and configurations. Please cite the above paper when reporting, reproducing or extending the results.
 
